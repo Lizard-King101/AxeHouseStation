@@ -1,11 +1,10 @@
 import {pointsProcess, lerp, createPoint, updatePoint, deletePoint, toScreenPos, renderPoint} from './points-track';
 
-export function Planks() {
+export function Target() {
 }
-Planks.prototype = {
+Target.prototype = {
   preload: function () {
     this.load.image('ball', 'assets/game_assets/sprites/pangball.png');
-    this.game.load.spritesheet('pig', 'assets/game_assets/sprites/Piggy_sheet.png', 150,150, 8);
   },
   create: function () {
     this.physics.startSystem(Phaser.Physics.ARCADE);
@@ -20,13 +19,18 @@ Planks.prototype = {
     this.Objects = [];
 
     this.cpText = this.game.add.text(10, 100, "Player 1" , { font: "bold 16px Arial", fill: "#fff", align: "left" });
-    //this.cpText.setShadow(3, 3, 'rgba(0,0,0,0.5)', 2);
+    this.cpText.anchor.setTo(0, 0);
+    this.cppText = this.game.add.text(10, 100, "0" , { font: "bold 16px Arial", fill: "#fff", align: "center" });
+    this.cppText.anchor.setTo(0.5, 0);
+    this.crText = this.game.add.text(10, 100, "Round 1" , { font: "bold 16px Arial", fill: "#fff", align: "right" });
+    this.crText.anchor.setTo(1, 0);
+    // game vars
 
     this.currentPlayer = 0;
+    this.currentRound = 0;
+    this.totalRounds = 7;
     this.players = [];
     this.gameWon = false;
-
-    // game vars
 
     this.pointToHit = 200;
     this.pointSensitivity = 5;
@@ -67,23 +71,12 @@ Planks.prototype = {
     } 
     this.graphics.clear();
 
-    if(this.gameWon && !this.gameOnce){
-      this.gameOnce = true;
-      this.wonText = this.game.add.text(this.game.width / 2, this.game.height / 2, "Player "+ (this.currentPlayer + 1) + " Won" , { font: "bold 32px Arial", fill: "#fff", align: "left" });
-      this.wonText.setShadow(3, 3, 'rgba(0,0,0,0.5)', 2);
-      this.wonText.anchor.setTo(0.5, 1);
-    }
+    this.graphics.beginFill('0x00CCFF');
+    this.graphics.drawRect(this.playArea.pos.x, this.playArea.pos.y, this.playArea.size.x, this.playArea.size.y);
+    this.graphics.endFill();
+
     this.Objects.forEach((object, i)=>{
-      if(object.poly){
-        if(object.plank){
-          this.graphics.lineStyle(0, 0xff0000, 1);
-          this.graphics.beginFill('0x' + (this.players[this.currentPlayer].plank == object.index ? this.boardColors[2] : this.boardColors[1]));
-          this.graphics.drawPolygon(object.poly.points);
-          this.graphics.endFill();
-        }
-      }else{
-        object.render();
-      }
+      object.render();
     });
 
     if (this.game.input.activePointer.leftButton.isDown) {
@@ -100,48 +93,21 @@ Planks.prototype = {
       //this.fps.text = "FPS: " + Math.round(this.game.frameData.fps);
     }
   },
-  hitPlank: function(index) {
-    if(!this.gameWon){
-      if(index == this.players[this.currentPlayer].plank){
-        if(this.players[this.currentPlayer].checkWin()){
-          this.gameWon = true;
-        }
-      }else{
-        this.currentPlayer = this.currentPlayer + 1 <= this.players.length -1 ? this.currentPlayer + 1 : 0;
-        this.cpText.setText("Player "+ (this.currentPlayer + 1));
-      }
-    }
-  },
-  resetGame: function(){
-    this.gameOnce = false;
-    this.gameWon = false;
-    this.currentPlayer = 0;
-    if(this.wonText) this.wonText.destroy();
-    this.cpText.setText("Player "+ (this.currentPlayer + 1));
-    this.players = [];
-    this.BoardResize();
-  },
   resize: function(){
-    if(this.wonText){
-      this.wonText.x = this.game.width / 2;
-      this.wonText.y = this.game.height / 2;
-    }
     this.BoardResize();
   },
   BoardResize: function (){
     this.Objects.forEach((object)=>{object.destroy ? object.destroy() : null});
     this.Objects = [];
+
     if(this.game.playerCount != this.players.length){this.players = [];}
     if(this.players.length < this.game.playerCount){
       for(let i = 0; i < this.game.playerCount; i++){
         let player = new this.Player();
-        player.init({
-          plank: this.game.plankCount - 1,
-          totalPlanks: this.game.plankCount - 1
-        });
         this.players.push(player);
       }
     }
+
     let width = this.game.width > this.game.height;
     this.playArea.size = {
       x: (width ? this.game.height * (this.game.boardSize / 100) : this.game.width * (this.game.boardSize / 100)) + this.game.boardSizeAdjust.x ,
@@ -151,40 +117,114 @@ Planks.prototype = {
       x: (this.game.width / 2 - this.playArea.size.x / 2) + this.game.boardPositionAdjust.x,
       y: (this.game.height / 2 - this.playArea.size.y / 2) + this.game.boardPositionAdjust.y
     }
-    
+
     this.cpText.x = this.playArea.pos.x;
     this.cpText.y = this.playArea.pos.y - 20;
+    this.cppText.x = this.playArea.pos.x + this.playArea.size.x / 2;
+    this.cppText.y = this.playArea.pos.y - 20;
+    this.crText.x = this.playArea.pos.x + this.playArea.size.x;
+    this.crText.y = this.playArea.pos.y - 20;
 
-    let reset = new this.Reset();
-    reset.init({scene: this});
-    this.Objects.push(reset);
+    let tPos = {
+      x: this.playArea.pos.x + this.playArea.size.x / 2,
+      y: this.playArea.pos.y + this.playArea.size.y / 2
+    }
+    let tR = (this.playArea.size.x < this.playArea.size.y ? this.playArea.size.x : this.playArea.size.y) - 20 ;
+    console.log('Play Size: '+ this.playArea.size.y);
+    for(let i = 5; i > 0; i --){
+      let ring = new this.Ring();
+      let r = this.playArea.size.y * ([0.0832,0.250,0.40,0.5832,0.75])[i - 1];
+      console.log('Ring #'+i+': '+r)
+      ring.init({
+        scene: this,
+        pos: tPos,
+        textPos: {
+          x: tPos.x, 
+          y: tPos.y - (r/2 - 30)
+        },
+        r,
+        stroke: this.playArea.size.y * 0.0179,
+        points: ([6, 4, 3, 2, 1])[i-1],
+        color: (["0xFF0000","0xFFFFFF","0xFFFFFF","0xFFFFFF","0xFFFFFF"])[i -1]
+      });
+      this.Objects.push(ring);
+    }
+
+
 
     let home = new this.Home();
     home.init({scene: this});
     this.Objects.push(home);
 
-    for(let i = 0; i < this.game.plankCount; i++){
-      let box = new this.Box();
-      box.init({
-        index: i,
-        scene: this,
-        points: [
-          {
-            x: (this.playArea.size.x/this.game.plankCount * i) + this.playArea.pos.x,
-            y: this.playArea.pos.y
-          },{
-            x: (this.playArea.size.x/this.game.plankCount * (i + 1)) + this.playArea.pos.x,
-            y: this.playArea.pos.y
-          },{
-            x: (this.playArea.size.x/this.game.plankCount * (i + 1)) + this.playArea.pos.x,
-            y: this.playArea.pos.y + this.playArea.size.y
-          },{
-            x: (this.playArea.size.x/this.game.plankCount * i) + this.playArea.pos.x,
-            y: this.playArea.pos.y + this.playArea.size.y
-          } 
-        ]
-      });
-      this.Objects.push(box);
+    let reset = new this.Reset();
+    reset.init({scene: this});
+    this.Objects.push(reset);
+  },
+  givePoints: function (points) {
+    console.log("Give Player: " +points+ " points");
+    if(points){
+      this.players[this.currentPlayer].points += points;
+    }
+    if(this.currentPlayer + 1 > this.players.length - 1){
+      // reset next round
+      this.currentPlayer = 0;
+      if(this.currentRound + 1 > this.totalRounds){
+        // find who one
+      }else{
+        this.currentRound += 1;
+      }
+    }else{
+      this.currentPlayer += 1;
+    }
+
+    // update text
+    this.cpText.setText("Player "+ (this.currentPlayer + 1));
+    this.cppText.setText(this.players[this.currentPlayer].points);
+    this.crText.setText("Round "+ (this.currentRound + 1));
+  },
+  Player: function (){
+    this.points = 0;
+    this.init = (options) => {
+      Object.keys(options).forEach((key)=>{ this[key] = options[key]; });
+    }
+  },
+  resetGame: function(){
+    this.gameOnce = false;
+    this.gameWon = false;
+    this.currentPlayer = 0;
+    this.currentRound = 0;
+    if(this.wonText) this.wonText.destroy();
+    this.cpText.setText("Player " + (this.currentPlayer + 1));
+    this.cppText.setText("0");
+    this.crText.setText("Round "+ (this.currentRound + 1));
+    this.players = [];
+    this.BoardResize();
+  },
+  Reset: function () {
+    this.r = 100
+    this.pos = {
+      x: 0,
+      y: 0
+    }
+    this.init = (options) => {
+      this.scene = options.scene;
+      this.graphics = options.scene.graphics;
+      this.pos = {
+        x: this.scene.game.width - (this.r + 20),
+        y: this.r + 20
+      }
+    }
+    this.render = () => {
+      this.graphics.lineStyle(1, 0x00ff00, 1);
+      this.graphics.drawCircle(this.pos.x, this.pos.y, this.r);
+    }
+    this.checkHit = (pos) => {
+      let xs = this.pos.x - pos.x;
+      let ys = this.pos.y - pos.y;
+      if(Math.hypot(xs,ys) < this.r ){
+        this.scene.resetGame();
+        return 'no-point';
+      }
     }
   },
   Home: function () {
@@ -219,68 +259,40 @@ Planks.prototype = {
       delete this.text;
     }
   },
-  Reset: function () {
+  Ring: function () {
     this.r = 100
+    this.stroke = 2
     this.pos = {
       x: 0,
       y: 0
     }
     this.init = (options) => {
       this.scene = options.scene;
-      this.graphics = options.scene.graphics;
-      this.pos = {
-        x: this.scene.game.width - (this.r + 20),
-        y: this.r + 20
-      }
+      this.pos = options.pos;
+      this.r = options.r;
+      this.color = options.color;
+      this.points = options.points;
+      this.stroke = options.stroke;
+      this.graphics = this.scene.graphics;
+      this.text = this.scene.game.add.text(options.textPos.x,options.textPos.y, options.points, { font: 'bold 16pt Arial', fill: 'black', align: 'left' });
+      this.text.anchor.setTo(0.5, 0.5);
     }
     this.render = () => {
-      this.graphics.lineStyle(1, 0x00ff00, 1);
+      this.graphics.beginFill(this.color);
+      this.graphics.lineStyle(this.stroke, 0x000000, 1);
       this.graphics.drawCircle(this.pos.x, this.pos.y, this.r);
+      this.graphics.endFill();
     }
     this.checkHit = (pos) => {
       let xs = this.pos.x - pos.x;
       let ys = this.pos.y - pos.y;
-      if(Math.hypot(xs,ys) < this.r ){
-        this.scene.resetGame();
+      if(Math.hypot(xs,ys) < this.r /2 ){
+        return this.points;
       }
     }
-  },
-  Player: function (){
-    this.plank = 0;
-    this.direction = -1;
-    this.totalPlanks = 3;
-    this.init = (options) => {
-      Object.keys(options).forEach((key)=>{ this[key] = options[key]; });
+    this.destroy = () => {
+      this.text.destroy();
     }
-    this.checkWin = () => {
-      if(this.plank == 0 && this.direction == -1) this.direction = 1;
-      this.plank += this.direction;
-      if(this.direction == 1 && this.plank == this.totalPlanks){
-        return true;
-      }else{
-        return false;
-      }
-    }
-  },
-  Box: function(){
-    this.plank = true;
-    this.poly = null;
-    this.checkHit = (pos)=>{
-      if(this.poly.contains(pos.x, pos.y)){
-        this.scene.hitPlank(this.index);
-      }
-    }
-    this.init = (options)=>{
-      this.index = options.index;
-      this.scene = options.scene;
-      if(options.points){
-        let pointArr = [];
-        options.points.forEach((point)=>{
-          pointArr.push(new Phaser.Point(point.x,point.y));
-        });
-        this.poly = new Phaser.Polygon(pointArr);
-      }
-    };
   },
   pointsProcess, lerp, createPoint, updatePoint, deletePoint, toScreenPos, renderPoint
 }

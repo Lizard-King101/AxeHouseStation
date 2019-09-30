@@ -1,1 +1,8 @@
-<div #container id="game-container"></div>
+<div #container id="game-container">
+    <ng-container *ngIf="!ingame">
+        <div class="station-data">
+            <h1>{{station}}</h1>
+            <p *ngFor="let player of players; let i = index">Player {{i+1}}: {{player}}</p>
+        </div>
+    </ng-container>
+</div>

@@ -1,13 +1,12 @@
 import { Injectable } from '@angular/core';
 declare var io;
-declare var ss;
 
 @Injectable()
 export class SocketIO{
     public io;
-    public ss;
+    public io2;
     constructor(){
         this.io = io('http://localhost:3000');
-        this.ss = ss;
+        this.io2 = io('http://localhost:3030');
     }
 }

@@ -36,13 +36,11 @@ export function toScreenPos (pos) {
     return newPos;
 }
 export function createPoint (key, pos) {
-    console.log('Create Point '+ key +` at X:${pos.x}, Y:${pos.y}`);
     let name = this.game.add.text(pos.x, pos.y - 10, key, { font: 'bold 10pt Arial', fill: 'white', align: 'left' });
     name.anchor.setTo(0.5, 1);
     this.points[key] = { pos, name, counto: this.game.pointToHit, countat: 0, lerped: 0, tracking: true };
 }
 export function deletePoint(key) {
-    console.log('Deleting Point '+ key);
     this.points[key].name.destroy();
     delete this.points[key];
 }
@@ -80,9 +78,17 @@ export function renderPoint(key) {
             point.countat += this.game.time.elapsed;
           }else if(!point.hitOnce){
                 point.hitOnce = true;
+                let val = false;
+                let nopoint = false;
                 this.Objects.forEach((object)=>{
-                    if(object.checkHit) object.checkHit(pos);
+                    if(object.checkHit) {
+                        let point = object.checkHit(pos);
+                        console.log('click return', point);
+                        if(point == 'no-point') nopoint = true;
+                        else if(point) val = point > val ? point : val;
+                    }
                 })
+                if(this.givePoints && !nopoint) this.givePoints(val);
             }
             point.lerped = this.lerp(point.lerped, point.countat, 0.5);
             this.graphics.lineStyle(5, 0x000000, 1);
