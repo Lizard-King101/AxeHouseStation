@@ -37,7 +37,7 @@
     "opencv4nodejs": "^4.14.1",
     "phaser-ce": "^2.12.0",
     "rxjs": "^5.5.11",
-    "socket.io": "^2.2.0",
+    "socket.io": "^2.4.0",
     "socket.io-stream": "^0.9.1",
     "sw-toolbox": "3.6.0",
     "worker-farm": "^1.6.0",
